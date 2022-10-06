@@ -1,0 +1,82 @@
+#include <Arduino.h>
+
+void ProcessCommand();
+
+// the setup function runs once when you press reset or power the board
+void setup() {
+    // initialize digital pin LED_BUILTIN as an output.
+    pinMode(LED_BUILTIN, OUTPUT);
+    Serial.begin(9600);
+}
+
+// the loop function runs over and over again forever
+void loop() {
+    digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+    delay(500);                       // wait for a second
+    digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
+    delay(2000);                       // wait for a second
+
+    if (Serial.available() > 0)            // Commands from the serial port have priority
+    {
+        ProcessCommand();
+        return;
+    }
+}
+
+void ProcessCommand()
+{
+    char command, command2;
+    int ram;
+
+    command = Serial.read();
+
+    switch (command) {
+        case 's':
+            Serial.println(F("Command: Stop"));
+            return;
+
+        case 'd':
+            Serial.println(F("Command: Disable"));
+            return;
+
+        case 'e':
+            Serial.println(F("Command: Enable"));
+            return;
+
+        case '?':
+            Serial.println(F("Command: Print all Switches"));
+            return;
+
+        case 'm':
+            Serial.println(F("Command: Show Memory Usage"));
+            Serial.println(F("Command: Open"));
+            return;
+
+        case 'c':
+            Serial.println(F("Command: Close"));
+            return;
+
+        case 't':
+            Serial.println(F("Command: Relay Test"));
+            return;
+
+        case 'l':                           // start a left motor
+            do { command2 = Serial.read(); }
+            while (command2 == -1);       // wait for a second command character
+            switch (command2) {
+                case 'o':
+                    Serial.println(F("Command: Left Open"));
+                    break;
+                case 'c':
+                    Serial.println(F("Command: Left Close"));
+                    break;
+                case 'u':
+                    Serial.println(F("Command: Left Up"));
+                    break;
+                case 'd':
+                    Serial.println(F("Command: Left Down"));
+                    break;
+            }
+            return;
+    }
+}
