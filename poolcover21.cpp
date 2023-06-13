@@ -62,10 +62,14 @@ const char * VERSION = "1.06";
 const int M_LEFT_OPEN = 5;   // Ard D5 Purple to Relay IN4
                              //   Purple to Board D37 Grey to LMdb9 pin5
 const int M_LEFT_CLOSE = 4;  // ARd D4 Silver to Relay IN3
-const int M_LEFT_UP = 2;     // Ard D2 (D3 according to p20!) Brown to Relay IN1
+const int M_LEFT_UP = 3;     // Ard D2 (D3 according to p20!) Brown to Relay IN1
                              //   Black to Board D40 Black to LMdb9 pin 2
-const int M_LEFT_DOWN = 3;   // Ard D3 but is D2 ..
+                             // Ucha June2023 swapping updown: was 2 now 3
+const int M_LEFT_DOWN = 2;   // Ard D3 but is D2 ..
+                             // Ucha June2023 swapping updown: was 3 now 2
 
+
+// Ucha June2023 Some time ago made this swap and it was wrong apparently
 // swapped M_LEFT_UP and M_LEFT_DOWN
 //const int M_LEFT_DOWN = 2;
 //const int M_LEFT_UP = 3;
@@ -73,10 +77,12 @@ const int M_LEFT_DOWN = 3;   // Ard D3 but is D2 ..
 
 const int M_RIGHT_OPEN = 9;  // Ard D9 Orange
 const int M_RIGHT_CLOSE = 8; // Ard D8 Yellow
-const int M_RIGHT_UP = 6;
-const int M_RIGHT_DOWN = 7; // 24sep2022 swapped left UD back and right UD
-//const int M_RIGHT_UP = 7;
-//const int M_RIGHT_DOWN = 6;
+//const int M_RIGHT_UP = 6;
+//const int M_RIGHT_DOWN = 7; // 24sep2022 swapped left UD back and right UD
+                            // Ucha 8June2023 Swapped them back after first test
+                            //                right up is 7 and right down is 6
+const int M_RIGHT_UP = 7;
+const int M_RIGHT_DOWN = 6;
 const int S_LEFT_FULLY_OPEN = 10;    // Ard D10 Orange to Board B11
 const int S_LEFT_FULLY_CLOSED = 11;  // Ard D11 Red to Board B7
 const int S_LEFT_FULLY_LIFTED = 12;
@@ -1207,6 +1213,8 @@ void PrintAllSwitches()
     sprintf(buffer,"Key open is     %d",S_key_open);
     Serial.println(buffer);
     sprintf(buffer,"Key close is    %d",S_key_close);
+    Serial.println(buffer);
+    sprintf(buffer,"Section count   %d",Auto_Section_Count);
     Serial.println(buffer);
     sprintf(buffer,"Command: %d",Command);
     Serial.println(buffer);
