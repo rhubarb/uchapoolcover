@@ -259,7 +259,6 @@ void loop()
 
     if (Command == COMMAND_NONE)
     {
-        DEBUG("Command NONE => All Stop")
         All_Stop();                         // also resets all flags and error states
         return;
     }
@@ -314,12 +313,7 @@ void Open()
     if ( ((S_left_lifted == OFF) || (S_right_lifted == OFF))       // if not fully lifted
          &&   ((S_left_closed == OFF) && (S_right_closed == OFF)) )     // and no section fully closed ..
     {
-        Report_Error("*** Lift not at top but no section is closed *** \n " \
-            "Before we can open, the lift mechanism must be at the top, otherwise we could break something.\n" \
-            "We assume here that it is always safe to move the lift, because the logic here will never move \n" \
-            " the lift mechanism away from the top position unless a cover section is fully open or fully closed. \n" \
-            "It's not safe to lift the last section, because it is still engaged in the drive wheels. \n" \
-            "We prevent this by not lifting unless at least one Fully Closed sensor is active");
+        Report_Error("*** Lift not at top but no section is closed **");
         return;
     }
 
@@ -331,7 +325,7 @@ void Open()
         if (Time_Left_Lift_Started == -1)                // if we were not already lifting
         {
             Time_Left_Lift_Started = millis();           // .. note when we started
-            Serial.println(F(" Left lift start"));
+            Serial.println(F(" Left lift start (lift to top before sliding open)"));
             Motor_Start(M_LEFT_UP);
         }
     }
@@ -342,7 +336,7 @@ void Open()
         if (Time_Right_Lift_Started == -1)              // if we were not already lifting
         {
             Time_Right_Lift_Started = millis();          // .. note when we started
-            Serial.println(F(" Right lift start"));
+            Serial.println(F(" Right lift start (lift to top before sliding open"));
             Motor_Start(M_RIGHT_UP);
         }
     }
@@ -413,8 +407,7 @@ void Open()
             if (Command == COMMAND_AUTO_OPEN)                  // if we are in auto-open mode and all sections are now open, stop
             {
                 Auto_Section_Count ++;
-                sprintf(buffer,"Auto_Section_Count: %d",Auto_Section_Count);
-                Serial.println(buffer);
+                DEBUG("Auto_Section_Count: %d",Auto_Section_Count)
                 if (Auto_Section_Count == NUMBER_OF_SECTIONS)
                 {
                     Command = COMMAND_NONE;
@@ -483,36 +476,47 @@ void Close()
     Motor_Stop(M_LEFT_OPEN);
     Motor_Stop(M_RIGHT_OPEN);
 
-// Before we can close, the lift mechanism should be at the top, otherwise we could break something.
+// Before we can close, the lift mechanism should be at the top, otherwise we could BREAK SOMETHING.
 // We assume here that it is always safe to move the lift, because we never move
 // the lift mechanism away from fully lifted unless a cover section is fully open or fully closed.
 //
 // if either side is not at the top, start it
 
+    // Left lift is not at the top and we're not sliding closed...
     if ((S_left_lifted == OFF) && (State != STATE_CLOSE_MOVING))
     {
+        // ... so start lowering (is this the right direction? Perhaps it should be up?)
         State = STATE_CLOSE_LOWERING;
         if (Time_Left_Lift_Started == -1)               // if we were not already lowering
         {
             Time_Left_Lift_Started = millis();           // .. note when we started
-            Serial.println(F(" Left down start"));
+            Serial.println(F(" Left down start to prep for close"));
             Motor_Start(M_LEFT_DOWN);
+        }
+        else {
+            Serial.println(F(" Left down already started to prep for close"));
         }
     }
 
+    // Rigth lift is not at the top and we're not sliding closed...
     if ((S_right_lifted == OFF) && (State != STATE_CLOSE_MOVING))
     {
+        // .... so start lowering (is this right?)
         State = STATE_CLOSE_LOWERING;
         if (Time_Right_Lift_Started == -1)              // if we were not already lifting
         {
             Time_Right_Lift_Started = millis();          // .. note when we started
-            Serial.println(F(" Right down start"));
+            Serial.println(F(" Right down start to prep for close"));
             Motor_Start(M_RIGHT_DOWN);
+        }
+        else {
+            Serial.println(F(" Right down already started to prep for close"));
         }
     }
 
 // if either lift has reached the top, stop it
 
+    // Left lift is running and now it at top
     if ((Time_Left_Lift_Started != -1) && (S_left_lifted == ON))
     {
         delay(LIFT_OVER_RUN);
@@ -522,6 +526,7 @@ void Close()
         just_lifted = true;
     }
 
+    // Right lift is running and now it at top
     if ((Time_Right_Lift_Started != -1) && (S_right_lifted == ON))
     {
         delay(LIFT_OVER_RUN);
@@ -540,12 +545,13 @@ void Close()
     if (just_lifted && (Time_Left_Lift_Started == -1) && (Time_Right_Lift_Started == -1))
         if ((S_left_open == OFF) && (S_right_open == OFF))
         {
+            // Finished lifting a section, but nothing pressing against the back (fully open) switches
             Report_Error("*** No section ready to move after lower");
             return;
         }
 
 // if either side is still lowering, we are done here for now
-
+    // still lowering or rotating back to top after lowering - continue to loop
     if ((S_left_lifted == OFF) || (S_right_lifted == OFF))
         return;
 
@@ -678,7 +684,6 @@ void Close()
 //
 void All_Stop()
 {
-    DEBUG("All_Stop")
     Motor_Stop(M_LEFT_UP);
     Motor_Stop(M_RIGHT_UP);
     Motor_Stop(M_LEFT_DOWN);
@@ -1298,7 +1303,7 @@ boolean Check_Max_Times()
             difference = millis() - Time_Separate_Move_Started;
             if (difference > MAX_MOVE_DIFFERENCE)
             {
-                Report_Error("*** Exceeded MAX_MOVE_DIFFERENCE");
+                Report_Error(("*** Exceeded MAX_MOVE_DIFFERENCE"));
                 return true;
             }
         }

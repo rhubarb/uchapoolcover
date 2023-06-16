@@ -3,3 +3,4 @@
 .DS_Store
 .idea/vcs.xml
 cmake/.DS_Store
+.vscode/tasks.json
