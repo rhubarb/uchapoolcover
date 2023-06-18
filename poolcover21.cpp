@@ -1,4 +1,3 @@
-// Ucha NOTEs:
 //  - set serial terminal to 57600 per constant below
 // Commands:
 // ? Show the current state of all the switches
@@ -180,6 +179,7 @@ int Force_Mode = false;                   // true to force continuation through 
 void Motor_Stop(int pin);
 void Motor_Start(int pin);
 void Beep(int number);
+void ErrorCodeBeep(int number);
 int Get_Voltage(boolean print);
 boolean Check_Max_Times();
 void ReadAllSwitches();                     // read all the switches
@@ -195,6 +195,7 @@ void KeyOpenChange();
 void Open();
 void Close();
 void Report_Error(char * message);
+void Report_Numbered_Error(int number, char * message);
 void Relay_Test();
 void check_mem();
 int availableMemory();
@@ -313,7 +314,7 @@ void Open()
     if ( ((S_left_lifted == OFF) || (S_right_lifted == OFF))       // if not fully lifted
          &&   ((S_left_closed == OFF) && (S_right_closed == OFF)) )     // and no section fully closed ..
     {
-        Report_Error("*** Lift not at top but no section is closed **");
+        Report_Numbered_Error(3, "*** Lift not at top but no section is closed **");
         return;
     }
 
@@ -448,7 +449,7 @@ void Open()
         }
         if ((millis() - started) > MAX_INITIAL_LIFT_TIME)
         {
-            Report_Error("*** MAX_INITIAL_LIFT_TIME exceeded ***");
+            Report_Numbered_Error(9, "*** MAX_INITIAL_LIFT_TIME exceeded ***");
             return;
         }
     }
@@ -546,7 +547,7 @@ void Close()
         if ((S_left_open == OFF) && (S_right_open == OFF))
         {
             // Finished lifting a section, but nothing pressing against the back (fully open) switches
-            Report_Error("*** No section ready to move after lower");
+            Report_Numbered_Error(5, "*** No section ready to move after lower");
             return;
         }
 
@@ -645,7 +646,7 @@ void Close()
             }
             if ((millis() - started) > MAX_INITIAL_CLOSE_TIME)
             {
-                Report_Error("*** MAX_INITIAL_CLOSE_TIME exceeded ***");
+                Report_Numbered_Error(11, "*** MAX_INITIAL_CLOSE_TIME exceeded ***");
                 return;
             }
         }
@@ -672,7 +673,7 @@ void Close()
             }
             if ((millis() - started) > MAX_INITIAL_LIFT_TIME)
             {
-                Report_Error("*** MAX_INITIAL_LIFT_TIME exceeded ***");
+                Report_Numbered_Error(13, "*** MAX_INITIAL_LIFT_TIME exceeded ***");
                 return;
             }
         }
@@ -947,7 +948,7 @@ void HandleKeyState()
 {
     if ((S_key_open == ON) && (S_key_close == ON))
     {
-        Report_Error("*** Key open and close should never be on at the same time");
+        Report_Numbered_Error(27, "*** Key open and close should never be on at the same time");
         return;
     }
 
@@ -1246,7 +1247,7 @@ boolean Check_Max_Times()
         left_lift_runtime = millis() - Time_Left_Lift_Started;
         if (left_lift_runtime > MAX_LIFT_TIME)
         {
-            Report_Error("*** Left lift exceeded MAX_LIFT_TIME");
+            Report_Numbered_Error(15, "*** Left lift exceeded MAX_LIFT_TIME");
             return true;
         }
     }
@@ -1256,7 +1257,7 @@ boolean Check_Max_Times()
         right_lift_runtime = millis() - Time_Right_Lift_Started;
         if (right_lift_runtime > MAX_LIFT_TIME)
         {
-            Report_Error("*** Right lift exceeded MAX_LIFT_TIME");
+            Report_Numbered_Error(15, "*** Right lift exceeded MAX_LIFT_TIME");
             return true;
         }
     }
@@ -1266,7 +1267,7 @@ boolean Check_Max_Times()
         left_move_runtime = millis() - Time_Open_Started;
         if (left_move_runtime > MAX_MOVE_TIME)
         {
-            Report_Error("*** Open exceeded MAX_MOVE_TIME");
+            Report_Numbered_Error(17,"*** Open exceeded MAX_MOVE_TIME");
             return true;
         }
     }
@@ -1276,7 +1277,7 @@ boolean Check_Max_Times()
         left_move_runtime = millis() - Time_Left_Move_Started;
         if (left_move_runtime > MAX_MOVE_TIME)
         {
-            Report_Error("*** Left close exceeded MAX_MOVE_TIME");
+            Report_Numbered_Error(19, "*** Left close exceeded MAX_MOVE_TIME");
             return true;
         }
     }
@@ -1286,7 +1287,7 @@ boolean Check_Max_Times()
         right_move_runtime = millis() - Time_Right_Move_Started;
         if (right_move_runtime > MAX_MOVE_TIME)
         {
-            Report_Error("*** Right close exceeded MAX_MOVE_TIME");
+            Report_Numbered_Error(21, "*** Right close exceeded MAX_MOVE_TIME");
             return true;
         }
     }
@@ -1303,7 +1304,7 @@ boolean Check_Max_Times()
             difference = millis() - Time_Separate_Move_Started;
             if (difference > MAX_MOVE_DIFFERENCE)
             {
-                Report_Error(("*** Exceeded MAX_MOVE_DIFFERENCE"));
+                Report_Numbered_Error(23, "*** Exceeded MAX_MOVE_DIFFERENCE");
                 return true;
             }
         }
@@ -1318,7 +1319,7 @@ boolean Check_Max_Times()
         difference = millis() - Time_Open_Key_Activated;
         if (difference > MAX_KEY_TIME)
         {
-            Report_Error("*** Exceeded MAX_KEY_TIME");
+            Report_Numbered_Error(25, "*** Exceeded MAX_KEY_TIME");
             return true;
         }
     }
@@ -1328,7 +1329,7 @@ boolean Check_Max_Times()
         difference = millis() - Time_Close_Key_Activated;
         if (difference > MAX_KEY_TIME)
         {
-            Report_Error("*** Exceeded MAX_KEY_TIME");
+            Report_Numbered_Error(25, "*** Exceeded MAX_KEY_TIME");
             return true;
         }
     }
@@ -1372,7 +1373,7 @@ int Get_Voltage(boolean print)
                 INFO("IGNORING : Battery voltage is too low to run (%d.%d)", (volts / 10), (volts % 10))
             } else {
                 sprintf(buffer, "Battery voltage is too low to run (%d.%d)", (volts / 10), (volts % 10));
-                Report_Error(buffer);
+                Report_Numbered_Error(7,buffer);
                 Beep(100);                    // Abrisud controller gives one 3 second beep for this case
             }
         }
@@ -1386,12 +1387,33 @@ int Get_Voltage(boolean print)
 //
 void Report_Error(char * message)
 {
+    Report_Numbered_Error(0, message);
+}
+
+void Report_Numbered_Error(int number, char * message)
+{
     Serial.print(F("*** ERROR: "));
     Serial.println(message);
     DEBUG("Report_Error => All Stop")
     All_Stop();
-    Beep(4);
+    if (number > 0) {
+        ErrorCodeBeep(number);
+    }
+    else {
+        Beep(4);
+    }
     State = STATE_ERROR;           // do nothing until key off/on
+}
+
+void ErrorCodeBeep(int number)
+{
+    DEBUG("Error Beep %d", number)
+    Beep(number);
+    delay(800);
+    Beep(number);
+    delay(800);
+    Beep(number);
+    delay(800);
 }
 
 //-----------------------------------------------------------------
@@ -1400,7 +1422,7 @@ void Report_Error(char * message)
 //
 void Beep(int number)
 {
-    DEBUG("Start Beep %d", number);
+    TRACE("Start Beep %d", number);
     if (Quiet_Mode) {
         DEBUG("Quiet mode: no beep");
         return;
@@ -1411,7 +1433,7 @@ void Beep(int number)
         digitalWrite(BUZZER, HIGH);
         delay(3000);
         digitalWrite(BUZZER, LOW);
-        DEBUG("Finishing Beep 100");
+        TRACE("Finishing Beep 100");
         return;
     }
 
@@ -1422,7 +1444,7 @@ void Beep(int number)
         digitalWrite(BUZZER, LOW);
         delay(200);
     }
-    DEBUG("Finishing Beep %d", number);
+    TRACE("Finishing Beep %d", number);
 }
 
 //-----------------------------------------------------------------
@@ -1454,7 +1476,7 @@ void Relay_Test()
 //
 void Motor_Start(int pin)
 {
-    DEBUG("Motor Start: %d", pin);
+    TRACE("Motor Start: %d", pin);
     digitalWrite(pin,LOW);
 }
 
@@ -1463,7 +1485,7 @@ void Motor_Start(int pin)
 //
 void Motor_Stop(int pin)
 {
-    DEBUG("Motor Stop: %d", pin);
+    TRACE("Motor Stop: %d", pin);
     digitalWrite(pin,HIGH);
 }
 
