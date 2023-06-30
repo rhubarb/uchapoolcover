@@ -126,7 +126,11 @@ const long MAX_LIFT_TIME = 30000;         // max milli-seconds to lift or lower 
 const long MAX_MOVE_DIFFERENCE = 2000;    // max milli-seconds difference between left and right move
 const long MAX_INITIAL_LIFT_TIME = 1000;  // max milli-seconds to run the lift motors to clear the "fully lifted" switches
 const long MAX_INITIAL_CLOSE_TIME = 1000; // max milli-seconds to run the close motors to clear the fully closed switches
-const long MAX_KEY_TIME = 180000;         // maximum time the key can be active
+// Ucha June 2023: This was too short and caused the opening to stop on the 2nd last panel. 180,000 is 3 mins so change
+//                 it to 4 mins = 240000
+//const long MAX_KEY_TIME = 180000;         // maximum time the key can be active
+const long MAX_KEY_TIME = 240000;         // maximum time the key can be active
+
 const int LIFT_OVER_RUN = 75;             // milli-seconds to run the lift after "fully lifted" is detected (to make sure it can't shake free)
 const int VOLTAGE_WARNING = 100;          // below 10 volts we give three beeps Ucha: was 10.5 but seemed too high
 const int VOLTAGE_ERROR = 85;            // below 8.5  volts we do not attempt to run. Ucha: was 10 but too high
@@ -135,6 +139,9 @@ const int AUTO_MODE_COUNT = 3;            // number of key activations to trigge
 const int AUTO_KEY_TIME = 4000;           // the key must be activated AUTO_MODE_COUNT times within AUTO_KEY_TIME ms to trigger auto mode
 // Ucha: change from 4 to 7
 const int NUMBER_OF_SECTIONS = 7;         // number of cover sections, used for auto-open and auto-close
+
+// Ucha - roll back for 5seconds - June 2023
+const int ROLL_BACK_TIME = 5000;
 
 // Current switch values
 
@@ -180,6 +187,7 @@ void Motor_Stop(int pin);
 void Motor_Start(int pin);
 void Beep(int number);
 void ErrorCodeBeep(int number);
+void SignalCodeBeep(int number);
 int Get_Voltage(boolean print);
 boolean Check_Max_Times();
 void ReadAllSwitches();                     // read all the switches
@@ -238,7 +246,7 @@ void setup()
 }
 
 //-----------------------------------------------------------------
-// The main loop
+// The main loop (called by Arduino)
 // Returning from this function causes processing to re-start at the top of the function
 //
 void loop()
@@ -310,30 +318,72 @@ void Open()
 //
 // It's not safe to lift the last section, because it is still engaged in the drive wheels.
 // We prevent this by not lifting unless at least one Fully Closed sensor is active
-
+//
+// Ucha
+// June 2023: This alert happens at the end of opening: because the lift has rotated past the stop switch
+//            but there is no magnet over the sensor - therefore we must have the last panel at the back
+    // IF Either is Not-at-Top and both sides have No-Magnet-on-Sensor - then something is wrong
+    //  .... or we just finished opening and the last panel is in but the lift senors have moved on a bit
     if ( ((S_left_lifted == OFF) || (S_right_lifted == OFF))       // if not fully lifted
          &&   ((S_left_closed == OFF) && (S_right_closed == OFF)) )     // and no section fully closed ..
     {
-        Report_Numbered_Error(3, "*** Lift not at top but no section is closed **");
-        return;
+        // Ucha June 2023 New section  -  ROLL BACK
+        // This used to be a simple error:
+        //      Report_Numbered_Error(3, "*** Lift not at top but no section is closed **");
+        // but no more...
+        // Assume we have just manually reached fully open with the last panel just pulled in but one of the fully-lifted
+        // switches is not on. Now turn off everything except the two rotate down (backwards) and run them for
+        // about 5 seconds to drop the top
+        Serial.println(F("Rolling back at the end of opening"));
+
+        // Signal 4 times then 1 at the end
+        SignalCodeBeep(1);
+        Motor_Stop(M_LEFT_UP);
+        Motor_Stop(M_RIGHT_UP);
+        Motor_Stop(M_LEFT_CLOSE);
+        Motor_Stop(M_RIGHT_CLOSE);
+        Motor_Stop(M_LEFT_OPEN);
+        Motor_Stop(M_RIGHT_OPEN);
+
+        Motor_Start(M_LEFT_DOWN);
+        Motor_Start(M_RIGHT_DOWN);
+        long rollback_started = millis();
+
+        while (true)
+        {
+            delay(500); // wait half second so as not to do a tight cpu loop
+            // Loop for about 5 seconds - then se the command to COMMAND_NONE which causes a full stop and
+            // return to the main loop
+            if ((millis() - rollback_started) > ROLL_BACK_TIME)
+            {
+                Serial.println(F("Rolling back ended - Fully Open"));
+                Command = COMMAND_NONE;
+                SignalCodeBeep(2);
+                Auto_Section_Count = 0;
+                return;
+            }
+        }
     }
 
 // if either side is not at the top, start it
-
     if (S_left_lifted == OFF)                          // if left side is not at the top
     {
         State = STATE_OPEN_LIFTING;
+        // IF  Not-at-Top AND Not-Rotating THEN start Rotating UP
         if (Time_Left_Lift_Started == -1)                // if we were not already lifting
         {
             Time_Left_Lift_Started = millis();           // .. note when we started
             Serial.println(F(" Left lift start (lift to top before sliding open)"));
             Motor_Start(M_LEFT_UP);
         }
+        // else we are already rotating left and counting Time_Left_Lift_Started until we get
+        // back into this loop and detect S_left_lifted == ON a few lines below
     }
 
     if (S_right_lifted == OFF)
     {
         State = STATE_OPEN_LIFTING;
+        // IF  Not-at-Top AND Not-Rotating THEN start Rotating UP
         if (Time_Right_Lift_Started == -1)              // if we were not already lifting
         {
             Time_Right_Lift_Started = millis();          // .. note when we started
@@ -344,6 +394,7 @@ void Open()
 
 // if either lift has reached the top, stop it
 
+    //  IF       Lift-Rotating        AND     Hit the Top!
     if ((Time_Left_Lift_Started != -1) && (S_left_lifted == ON))
     {
         delay(LIFT_OVER_RUN);
@@ -352,6 +403,7 @@ void Open()
         Serial.println(F(" Left lift stop"));
     }
 
+    //  IF       Lift-Rotating        AND     Hit the Top!
     if ((Time_Right_Lift_Started != -1) && (S_right_lifted == ON))
     {
         delay(LIFT_OVER_RUN);
@@ -361,9 +413,13 @@ void Open()
     }
 
 // if either side is still lifting, we are done here for now
-
+    // IF     L Not-at-Top    OR    R Not-at_Top
     if ((S_left_lifted == OFF) || (S_right_lifted == OFF))
-        return;
+        return; // At least 1 lift is still rotating - back to the main loop please!
+
+//
+// FULLY LIFTED  => TIME TO SLIDE OPEN
+//
 
 // can only get here if both sides are fully lifted
 // we can now move the cover backwards until it hits either fully open micro-switch
@@ -380,7 +436,7 @@ void Open()
     Motor_Stop(M_RIGHT_UP);
 
 // if neither side is fully open, start both move motors
-
+    // IF  L Back-switch-Free AND R Back-switch-Free
     if ((S_left_open == OFF) && (S_right_open == OFF))       // section is NOT fully open
     {
         if (Time_Open_Started == -1)                          // if move is not running
@@ -397,6 +453,10 @@ void Open()
 // - when opening, both fully open switches are not always triggered,
 // - and running the move motors separately does not help
 
+// Ucha note: this is why it lifts even when the L back switch is not hit  - and it lifts the panel a bit while catching it
+//            because only one of them needs to be pressed for the sliding to stop
+
+    // IF  L Back Pressed  OR   R Back Pressed
     if ((S_left_open == ON) || (S_right_open == ON))         // section is fully open
     {
         if (Time_Open_Started != -1)                          // if move is running
@@ -411,12 +471,14 @@ void Open()
                 DEBUG("Auto_Section_Count: %d",Auto_Section_Count)
                 if (Auto_Section_Count == NUMBER_OF_SECTIONS)
                 {
+                    // LAST SECTION IS FULLY BACK
                     Command = COMMAND_NONE;
                     Auto_Section_Count = 0;
                     return;
                 }
             }
         }
+        // else at least one is pressed but we weren't sliding open
     }
 
 // if either side is still opening, we are done here for now
@@ -424,12 +486,16 @@ void Open()
     if ((S_left_open == OFF) && (S_right_open == OFF))
         return;
 
+//
+// FULLY LIFTED AND FULLY OPEN => START LIFTING THE NEXT ONE
+//
+
 // we only get here if both sides are fully lifted and fully open ..
 // we must now start a "new lift", where we start both lift motors and wait for them
 // to clear the fully lifted switches before we go back to the main loop
 
     Serial.println(F("Section is fully open, starting initial lift..."));
-    State = STATE_OPEN_NEW_LIFT;
+    State = STATE_OPEN_NEW_LIFT; // This state is pretty much ignored
 
 // start both lift motors
 
@@ -441,6 +507,7 @@ void Open()
 
     while (true)
     {
+        // TIGHT LOOP: Read the switches and keep Rotating Up until both have cleared
         ReadAllSwitches();
         if ((S_left_lifted == OFF) && (S_right_lifted == OFF))
         {
@@ -517,7 +584,7 @@ void Close()
 
 // if either lift has reached the top, stop it
 
-    // Left lift is running and now it at top
+    // Left lift is running and now it is at top...
     if ((Time_Left_Lift_Started != -1) && (S_left_lifted == ON))
     {
         delay(LIFT_OVER_RUN);
@@ -1414,6 +1481,23 @@ void ErrorCodeBeep(int number)
     delay(800);
     Beep(number);
     delay(800);
+}
+
+// even numbers 4 times = a signal not an error
+void SignalCodeBeep(int number)
+{
+    DEBUG("Signal Beep %d", number)
+    Beep(number);
+    delay(1000);
+
+    Beep(number);
+    delay(1000);
+
+    Beep(number);
+    delay(1000);
+
+    Beep(number);
+    delay(1000);
 }
 
 //-----------------------------------------------------------------
