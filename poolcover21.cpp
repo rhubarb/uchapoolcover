@@ -140,8 +140,8 @@ const int AUTO_KEY_TIME = 4000;           // the key must be activated AUTO_MODE
 // Ucha: change from 4 to 7
 const int NUMBER_OF_SECTIONS = 7;         // number of cover sections, used for auto-open and auto-close
 
-// Ucha - roll back for 5seconds - June 2023
-const int ROLL_BACK_TIME = 5000;
+// Ucha - roll back for 3 seconds - June 2023
+const int ROLL_BACK_TIME = 3000;
 
 // Current switch values
 
@@ -351,6 +351,7 @@ void Open()
 
         while (true)
         {
+            DEBUG("Rolling back")
             delay(500); // wait half second so as not to do a tight cpu loop
             // Loop for about 5 seconds - then se the command to COMMAND_NONE which causes a full stop and
             // return to the main loop
@@ -561,9 +562,7 @@ void Close()
             Serial.println(F(" Left down start to prep for close"));
             Motor_Start(M_LEFT_DOWN);
         }
-        else {
-            Serial.println(F(" Left down already started to prep for close"));
-        }
+        TRACE("L rotating down")
     }
 
     // Rigth lift is not at the top and we're not sliding closed...
@@ -577,9 +576,7 @@ void Close()
             Serial.println(F(" Right down start to prep for close"));
             Motor_Start(M_RIGHT_DOWN);
         }
-        else {
-            Serial.println(F(" Right down already started to prep for close"));
-        }
+        TRACE("R rotating down")
     }
 
 // if either lift has reached the top, stop it
