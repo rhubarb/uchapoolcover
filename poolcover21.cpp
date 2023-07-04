@@ -357,6 +357,8 @@ void Open()
             // return to the main loop
             if ((millis() - rollback_started) > ROLL_BACK_TIME)
             {
+                Motor_Stop(M_LEFT_DOWN);
+                Motor_Stop(M_RIGHT_DOWN);
                 Serial.println(F("Rolling back ended - Fully Open"));
                 Command = COMMAND_NONE;
                 SignalCodeBeep(2);
