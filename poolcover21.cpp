@@ -47,7 +47,7 @@
 //#define ERROR__INT(fmt, ...) fprintf(stderr, "ERROR: " fmt "%s", __VA_ARGS__)
 //#define ERROR(...) ERROR__INT(__VA_ARGS__, "\n")
 
-const char * VERSION = "1.06";
+const char * VERSION = "2.00";
 
 // include the PROGMEM library
 // we were using too much RAM so we now store strings in program memory using the F() syntax
