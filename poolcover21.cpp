@@ -140,10 +140,6 @@ const int AUTO_KEY_TIME = 4000;           // the key must be activated AUTO_MODE
 // Ucha: change from 4 to 7
 const int NUMBER_OF_SECTIONS = 7;         // number of cover sections, used for auto-open and auto-close
 
-// Ucha - roll back for 3 seconds - June 2023
-const int ROLL_BACK_TIME = 3000;
-
-// Current switch values
 
 int S_left_open = OFF;
 int S_left_closed = OFF;
@@ -327,45 +323,8 @@ void Open()
     if ( ((S_left_lifted == OFF) || (S_right_lifted == OFF))       // if not fully lifted
          &&   ((S_left_closed == OFF) && (S_right_closed == OFF)) )     // and no section fully closed ..
     {
-        // Ucha June 2023 New section  -  ROLL BACK
-        // This used to be a simple error:
-        //      Report_Numbered_Error(3, "*** Lift not at top but no section is closed **");
-        // but no more...
-        // Assume we have just manually reached fully open with the last panel just pulled in but one of the fully-lifted
-        // switches is not on. Now turn off everything except the two rotate down (backwards) and run them for
-        // about 5 seconds to drop the top
-        Serial.println(F("Rolling back at the end of opening"));
-
-        // Signal 4 times then 1 at the end
-        SignalCodeBeep(1);
-        Motor_Stop(M_LEFT_UP);
-        Motor_Stop(M_RIGHT_UP);
-        Motor_Stop(M_LEFT_CLOSE);
-        Motor_Stop(M_RIGHT_CLOSE);
-        Motor_Stop(M_LEFT_OPEN);
-        Motor_Stop(M_RIGHT_OPEN);
-
-        Motor_Start(M_LEFT_DOWN);
-        Motor_Start(M_RIGHT_DOWN);
-        long rollback_started = millis();
-
-        while (true)
-        {
-            DEBUG("Rolling back")
-            delay(500); // wait half second so as not to do a tight cpu loop
-            // Loop for about 5 seconds - then se the command to COMMAND_NONE which causes a full stop and
-            // return to the main loop
-            if ((millis() - rollback_started) > ROLL_BACK_TIME)
-            {
-                Motor_Stop(M_LEFT_DOWN);
-                Motor_Stop(M_RIGHT_DOWN);
-                Serial.println(F("Rolling back ended - Fully Open"));
-                Command = COMMAND_NONE;
-                SignalCodeBeep(2);
-                Auto_Section_Count = 0;
-                return;
-            }
-        }
+        Report_Numbered_Error(3, "*** Lift not at top but no section is closed **");
+        return;
     }
 
 // if either side is not at the top, start it
