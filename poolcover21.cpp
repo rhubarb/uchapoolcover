@@ -182,8 +182,8 @@ int Force_Mode = false;                   // true to force continuation through 
 void Motor_Stop(int pin);
 void Motor_Start(int pin);
 void Beep(int number);
+void Debug_Beep(int number);
 void ErrorCodeBeep(int number);
-void SignalCodeBeep(int number);
 int Get_Voltage(boolean print);
 boolean Check_Max_Times();
 void ReadAllSwitches();                     // read all the switches
@@ -751,6 +751,7 @@ void ReadAllSwitches()
             S_left_closed = val1;
             sprintf(buffer,"Left closed is now %d",val1);
             Serial.println(buffer);
+            Debug_Beep(1);
             return;
         }
         delay(DEBOUNCE);  // 1.06 - only debounce a transition to OFF
@@ -759,6 +760,7 @@ void ReadAllSwitches()
             return;
         S_left_closed = val1;
         sprintf(buffer,"Left closed is now %d",val1);
+        Debug_Beep(1);
         Serial.println(buffer);
         return;
     }
@@ -771,6 +773,7 @@ void ReadAllSwitches()
             S_right_closed = val1;
             sprintf(buffer,"Right closed is now %d",val1);
             Serial.println(buffer);
+            Debug_Beep(2);
             return;
         }
         delay(DEBOUNCE);  // 1.06 - only debounce a transition to OFF
@@ -780,6 +783,7 @@ void ReadAllSwitches()
         S_right_closed = val1;
         sprintf(buffer,"Right closed is now %d",val1);
         Serial.println(buffer);
+        Debug_Beep(2);
         return;
     }
 
@@ -793,6 +797,7 @@ void ReadAllSwitches()
         S_left_open = val1;
         sprintf(buffer,"Left open is now %d",val1);
         Serial.println(buffer);
+        Debug_Beep(1);
         return;
     }
 
@@ -806,6 +811,7 @@ void ReadAllSwitches()
         S_right_open = val1;
         sprintf(buffer,"Right open is now %d",val1);
         Serial.println(buffer);
+        Debug_Beep(2);
         return;
     }
 
@@ -817,6 +823,7 @@ void ReadAllSwitches()
             S_left_lifted = val1;
             sprintf(buffer,"Left lifted is now %d",val1);
             Serial.println(buffer);
+            Debug_Beep(1);
             return;
         }
         delay(DEBOUNCE);  // 1.06 - only debounce a transition to OFF
@@ -826,6 +833,7 @@ void ReadAllSwitches()
         S_left_lifted = val1;
         sprintf(buffer,"Left lifted is now %d",val1);
         Serial.println(buffer);
+        Debug_Beep(1);
         return;
     }
 
@@ -837,6 +845,7 @@ void ReadAllSwitches()
             S_right_lifted = val1;
             sprintf(buffer,"Right lifted is now %d",val1);
             Serial.println(buffer);
+            Debug_Beep(2);
             return;
         }
         delay(DEBOUNCE);  // 1.06 - only debounce a transition to OFF
@@ -846,6 +855,7 @@ void ReadAllSwitches()
         S_right_lifted = val1;
         sprintf(buffer,"Right lifted is now %d",val1);
         Serial.println(buffer);
+        Debug_Beep(2);
         return;
     }
 
@@ -1441,23 +1451,6 @@ void ErrorCodeBeep(int number)
     delay(800);
 }
 
-// even numbers 4 times = a signal not an error
-void SignalCodeBeep(int number)
-{
-    DEBUG("Signal Beep %d", number)
-    Beep(number);
-    delay(1000);
-
-    Beep(number);
-    delay(1000);
-
-    Beep(number);
-    delay(1000);
-
-    Beep(number);
-    delay(1000);
-}
-
 //-----------------------------------------------------------------
 // Beep a number of times
 // 100 is a special case, giving one long 3 second beep
@@ -1487,6 +1480,13 @@ void Beep(int number)
         delay(200);
     }
     TRACE("Finishing Beep %d", number);
+}
+
+void Debug_Beep(int number)
+{
+    if (Log_Level >= LOG_LEVEL_DEBUG) {
+        Beep(number);
+    }
 }
 
 //-----------------------------------------------------------------
