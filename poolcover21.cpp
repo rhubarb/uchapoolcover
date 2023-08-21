@@ -178,6 +178,7 @@ const int LOG_LEVEL_TRACE = 10000;
 const int LOG_LEVEL_DEBUG = 1000;
 int Log_Level = LOG_LEVEL_INFO;
 int Force_Mode = false;                   // true to force continuation through low battery etc
+const int FULLY_OPEN_OVERRUN = 1500;      // milli-seconds to rotate the lift after presumed fully open
 
 void Motor_Stop(int pin);
 void Motor_Start(int pin);
@@ -324,6 +325,7 @@ void Open()
          &&   ((S_left_closed == OFF) && (S_right_closed == OFF)) )     // and no section fully closed ..
     {
         Report_Numbered_Error(3, "*** Lift not at top but no section is closed **");
+        delay(FULLY_OPEN_OVERRUN);
         return;
     }
 
