@@ -47,7 +47,6 @@
 //#define ERROR__INT(fmt, ...) fprintf(stderr, "ERROR: " fmt "%s", __VA_ARGS__)
 //#define ERROR(...) ERROR__INT(__VA_ARGS__, "\n")
 
-const char * VERSION = "2.02";
 
 // include the PROGMEM library
 // we were using too much RAM so we now store strings in program memory using the F() syntax
@@ -55,6 +54,8 @@ const char * VERSION = "2.02";
 
 #include <avr/pgmspace.h>
 #include <Arduino.h>
+
+const char * VERSION = "2.03"; // Overrun 12 Sep 2023
 
 // Define all the I/O pins
 
@@ -324,7 +325,9 @@ void Open()
     if ( ((S_left_lifted == OFF) || (S_right_lifted == OFF))       // if not fully lifted
          &&   ((S_left_closed == OFF) && (S_right_closed == OFF)) )     // and no section fully closed ..
     {
-        Report_Numbered_Error(3, "*** Lift not at top but no section is closed **");
+        Serial.println(F("*** Lift not at top but no section is closed ***"));
+//        Report_Numbered_Error(3, "*** Lift not at top but no section is closed **");
+        Beep(2); // keep it fast
         delay(FULLY_OPEN_OVERRUN);
         return;
     }
