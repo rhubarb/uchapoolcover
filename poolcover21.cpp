@@ -55,7 +55,7 @@
 #include <avr/pgmspace.h>
 #include <Arduino.h>
 
-const char * VERSION = "2.03"; // Overrun 12 Sep 2023
+const char * VERSION = "2.04"; // Overrun-attempt3 12 Sep 2023
 
 // Define all the I/O pins
 
@@ -329,6 +329,10 @@ void Open()
 //        Report_Numbered_Error(3, "*** Lift not at top but no section is closed **");
         Beep(2); // keep it fast
         delay(FULLY_OPEN_OVERRUN);
+        All_Stop(); // sets state to OFF
+        Command = COMMAND_NONE;
+        Auto_Section_Count = 0;
+
         return;
     }
 
